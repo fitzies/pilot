@@ -188,4 +188,96 @@ http.route({
   }),
 });
 
+// ── Health & Heartbeat ──
+
+http.route({
+  path: "/api/health",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateRequest(ctx, request);
+    if (auth instanceof Response) return auth;
+
+    await ctx.runMutation(internal.mutations.updateHealthCheck, {
+      userId: auth.userId,
+    });
+    return json({ status: "ok", userId: auth.userId, timestamp: Date.now() });
+  }),
+});
+
+http.route({
+  path: "/api/heartbeat",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateRequest(ctx, request);
+    if (auth instanceof Response) return auth;
+
+    await ctx.runMutation(internal.mutations.updateHeartbeat, {
+      userId: auth.userId,
+    });
+    return json({ status: "ok", timestamp: Date.now() });
+  }),
+});
+
+// ── Scheduled Jobs ──
+
+http.route({
+  path: "/api/scheduled-jobs",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateRequest(ctx, request);
+    if (auth instanceof Response) return auth;
+
+    const body = await request.json();
+    const jobId = await ctx.runMutation(
+      internal.mutations.createScheduledJob,
+      {
+        userId: auth.userId,
+        agentId: body.agentId,
+        name: body.name,
+        description: body.description,
+        cron: body.cron,
+        status: body.status ?? "active",
+      },
+    );
+    return json({ jobId });
+  }),
+});
+
+http.route({
+  path: "/api/scheduled-jobs",
+  method: "PATCH",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateRequest(ctx, request);
+    if (auth instanceof Response) return auth;
+
+    const body = await request.json();
+    await ctx.runMutation(internal.mutations.updateScheduledJob, {
+      jobId: body.jobId,
+      agentId: body.agentId,
+      name: body.name,
+      description: body.description,
+      cron: body.cron,
+      status: body.status,
+      lastRunAt: body.lastRunAt,
+      nextRunAt: body.nextRunAt,
+    });
+    return json({ success: true });
+  }),
+});
+
+http.route({
+  path: "/api/scheduled-jobs",
+  method: "DELETE",
+  handler: httpAction(async (ctx, request) => {
+    const auth = await authenticateRequest(ctx, request);
+    if (auth instanceof Response) return auth;
+
+    const body = await request.json();
+    await ctx.runMutation(internal.mutations.deleteScheduledJob, {
+      jobId: body.jobId,
+    });
+    return json({ success: true });
+  }),
+});
+
 export default http;

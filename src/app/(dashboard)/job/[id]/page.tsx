@@ -1,6 +1,11 @@
-import { notFound } from "next/navigation";
+"use client";
+
+import { useParams } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
+import { Id } from "../../../../../convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
-import { getScheduledJob, getAgentName } from "@/lib/agents";
+import { Spinner } from "@/components/ui/spinner";
 
 function parseCronNextRun(cron: string): Date {
   const [minute, hour, dayOfMonth, , dayOfWeek] = cron.split(" ");
@@ -73,17 +78,30 @@ function formatRelative(diffSec: number): string {
   return `in ${days}d ${hours % 24}h`;
 }
 
-export default async function JobPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-  const job = getScheduledJob(slug);
-  if (!job) notFound();
+export default function JobPage() {
+  const { id } = useParams<{ id: string }>();
+  const jobId = id as Id<"scheduledJobs">;
+
+  const job = useQuery(api.queries.getScheduledJob, { jobId });
+  const user = useQuery(api.queries.getCurrentUser);
+  const agents = useQuery(
+    api.queries.getAgents,
+    user ? { userId: user._id } : "skip",
+  );
+
+  if (job === undefined)
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <Spinner className="size-8" />
+      </div>
+    );
+  if (job === null) return <p className="text-sm text-muted-foreground">Job not found.</p>;
 
   const nextRun = parseCronNextRun(job.cron);
   const diffSec = Math.max(0, Math.round((nextRun.getTime() - Date.now()) / 1000));
+  const agentName = job.agentId
+    ? (agents ?? []).find((a) => a._id === job.agentId)?.name
+    : undefined;
 
   return (
     <div className="space-y-6">
@@ -121,10 +139,10 @@ export default async function JobPage({
         </div>
       </div>
 
-      {job.agentSlug && (
+      {agentName && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Assigned to</span>
-          <Badge variant="secondary">{getAgentName(job.agentSlug)}</Badge>
+          <Badge variant="secondary">{agentName}</Badge>
         </div>
       )}
     </div>

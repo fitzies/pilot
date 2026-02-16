@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
-import { Clock } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
-import { scheduledJobs, getAgentName } from "@/lib/agents";
+import { Doc, Id } from "../../convex/_generated/dataModel";
 
 function parseCronNextRun(cron: string): Date {
   const [minute, hour, dayOfMonth, , dayOfWeek] = cron.split(" ");
@@ -80,51 +83,71 @@ function getNextRun(cron: string): string {
   return formatRelative(diffSec);
 }
 
+function getAgentName(
+  agents: Doc<"agents">[] | undefined,
+  agentId?: Id<"agents">,
+) {
+  if (!agents || !agentId) return undefined;
+  return agents.find((a) => a._id === agentId)?.name;
+}
+
 export function ScheduledJobsPanel() {
+  const user = useQuery(api.queries.getCurrentUser);
+  const jobs = useQuery(
+    api.queries.getScheduledJobs,
+    user ? { userId: user._id } : "skip",
+  );
+  const agents = useQuery(
+    api.queries.getAgents,
+    user ? { userId: user._id } : "skip",
+  );
+
+  if (!jobs) return null;
+
   return (
-    <div className="space-y-1w-full pr-2">
+    <div className="space-y-1 w-full pr-2">
       <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground px-1 mb-2">
         Scheduled Jobs
       </p>
       <div className="space-y-2">
-        {scheduledJobs.map((job) => (
-          <Link
-            href={`/job/${job.slug}`}
-            key={job.slug}
-            className="block rounded-lg border bg-card p-3 space-y-1.5 hover:-translate-y-1 duration-150"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-foreground leading-snug">
-                {job.name}
-              </p>
-              <span
-                className={`h-2 w-2 shrink-0 rounded-full ${
-                  job.status === "active"
-                    ? "bg-emerald-500"
-                    : "bg-muted-foreground/30"
-                }`}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">{job.description}</p>
-            <div className="flex items-center justify-between">
-              {job.agentSlug && (
-                <Badge variant="outline">
-                  {getAgentName(job.agentSlug)}
-                </Badge>
-              )}
-              {job.status === "active" ? (
-                <span className="flex items-center gap-1 text-[11px] text-muted-foreground ml-auto">
-                  {/* <Clock className="h-3 w-3" /> */}
-                  {getNextRun(job.cron)}
-                </span>
-              ) : (
-                <span className="text-[11px] text-muted-foreground ml-auto">
-                  Paused
-                </span>
-              )}
-            </div>
-          </Link>
-        ))}
+        {jobs.map((job) => {
+          const agentName = getAgentName(agents, job.agentId);
+          return (
+            <Link
+              href={`/job/${job._id}`}
+              key={job._id}
+              className="block rounded-lg border bg-card p-3 space-y-1.5 hover:-translate-y-1 duration-150"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-foreground leading-snug">
+                  {job.name}
+                </p>
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${
+                    job.status === "active"
+                      ? "bg-emerald-500"
+                      : "bg-muted-foreground/30"
+                  }`}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">{job.description}</p>
+              <div className="flex items-center justify-between">
+                {agentName && (
+                  <Badge variant="outline">{agentName}</Badge>
+                )}
+                {job.status === "active" ? (
+                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground ml-auto">
+                    {getNextRun(job.cron)}
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-muted-foreground ml-auto">
+                    Paused
+                  </span>
+                )}
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

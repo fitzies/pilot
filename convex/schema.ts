@@ -6,6 +6,9 @@ export default defineSchema({
     externalId: v.string(),
     token: v.string(),
     name: v.optional(v.string()),
+    onboardingComplete: v.boolean(),
+    healthCheckAt: v.optional(v.number()),
+    lastHeartbeatAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_token", ["token"])
