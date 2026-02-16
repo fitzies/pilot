@@ -15,12 +15,13 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { AvatarDropdown } from "./avatar-dropdown";
+import { ModeToggle } from "./mode-toggle";
 
 function formatLocalTime() {
   return new Date().toLocaleTimeString("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
     hour12: false,
   });
 }
@@ -53,7 +54,7 @@ const ONBOARDED_GRACE_MS = 30 * 60 * 1000;
 
 export function StatusBar() {
   const pathname = usePathname();
-  const [now, setNow] = useState(Date.now);
+  const [now, setNow] = useState(() => Date.now());
   const user = useQuery(api.queries.getCurrentUser);
   const agents = useQuery(
     api.queries.getAgents,
@@ -123,17 +124,15 @@ export function StatusBar() {
                 : "bg-muted-foreground/40"
             }`}
           />
-          {aiName} {status}
+          {aiName}
         </span>
       </div>
       <div className="flex justify-end gap-2 md:gap-4 items-center">
         <span className="hidden lg:block font-mono text-xs text-muted-foreground">
           {formatLocalTime()}
         </span>
-        <Avatar size="sm">
-          <AvatarImage src="https://github.com/shadcn.png" />
-          <AvatarFallback>CN</AvatarFallback>
-        </Avatar>
+        <ModeToggle />
+        <AvatarDropdown />
       </div>
     </div>
   );
