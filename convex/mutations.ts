@@ -49,7 +49,7 @@ export const completeOnboarding = mutation({
     const agentId = await ctx.db.insert("agents", {
       userId,
       name: args.agentName,
-      role: "main",
+      role: "Lead",
       status: "idle",
       createdAt: Date.now(),
     });

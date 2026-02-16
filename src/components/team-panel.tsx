@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
-export function TeamPanel() {
+export function TeamPanel({ onNavigate }: { onNavigate?: () => void } = {}) {
   const user = useQuery(api.queries.getCurrentUser);
   const agents = useQuery(
     api.queries.getAgents,
@@ -22,7 +22,7 @@ export function TeamPanel() {
   );
 
   return (
-    <div className="space-y-1 ml-2">
+    <div className="space-y-1">
       <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground px-1 mb-2">
         Team
       </p>
@@ -31,6 +31,7 @@ export function TeamPanel() {
           <Link
             key={agent._id}
             href={`/agent/${agent._id}`}
+            onClick={onNavigate}
             className="block rounded-lg border bg-card p-3 space-y-1.5 hover:-translate-y-1 duration-150"
           >
             <div className="flex items-center justify-between">

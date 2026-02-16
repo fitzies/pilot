@@ -20,7 +20,7 @@ export default function TaskPage() {
 
   if (task === undefined)
     return (
-      <div className="flex min-h-[80vh] items-center justify-center">
+      <div className="flex h-[80vh] items-center justify-center">
         <Spinner className="size-8" />
       </div>
     );

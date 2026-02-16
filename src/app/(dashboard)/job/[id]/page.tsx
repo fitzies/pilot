@@ -112,7 +112,7 @@ export default function JobPage() {
         <p className="text-sm text-muted-foreground">{job.description}</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="rounded-lg border bg-card p-3 space-y-1">
           <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Status

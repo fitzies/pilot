@@ -91,8 +91,8 @@ export function StatusBar() {
         : "Offline";
 
   return (
-    <div className="grid grid-cols-3 items-center px-1 text-sm">
-      <div className="flex items-center gap-4 min-w-0">
+    <div className="flex items-center justify-between md:grid md:grid-cols-3 md:items-center px-1 text-sm">
+      <div className="flex items-center gap-2 md:gap-4 min-w-0">
         <span className="flex items-center gap-1.5 font-semibold text-foreground shrink-0">
           Pilot
         </span>
@@ -114,7 +114,7 @@ export function StatusBar() {
           </BreadcrumbList>
         </Breadcrumb>
       </div>
-      <div className="flex justify-center">
+      <div className="hidden md:flex justify-center">
         <span className="flex items-center gap-1.5 font-medium text-foreground">
           <span
             className={`h-2 w-2 rounded-full ${
@@ -126,8 +126,8 @@ export function StatusBar() {
           {aiName} {status}
         </span>
       </div>
-      <div className="flex justify-end gap-4 items-center">
-        <span className="font-mono text-xs text-muted-foreground">
+      <div className="flex justify-end gap-2 md:gap-4 items-center">
+        <span className="hidden lg:block font-mono text-xs text-muted-foreground">
           {formatLocalTime()}
         </span>
         <Avatar size="sm">

@@ -91,7 +91,7 @@ function getAgentName(
   return agents.find((a) => a._id === agentId)?.name;
 }
 
-export function ScheduledJobsPanel() {
+export function ScheduledJobsPanel({ onNavigate }: { onNavigate?: () => void } = {}) {
   const user = useQuery(api.queries.getCurrentUser);
   const jobs = useQuery(
     api.queries.getScheduledJobs,
@@ -105,7 +105,7 @@ export function ScheduledJobsPanel() {
   if (!jobs) return null;
 
   return (
-    <div className="space-y-1 w-full pr-2">
+    <div className="space-y-1 w-full">
       <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground px-1 mb-2">
         Scheduled Jobs
       </p>
@@ -116,6 +116,7 @@ export function ScheduledJobsPanel() {
             <Link
               href={`/job/${job._id}`}
               key={job._id}
+              onClick={onNavigate}
               className="block rounded-lg border bg-card p-3 space-y-1.5 hover:-translate-y-1 duration-150"
             >
               <div className="flex items-center justify-between">

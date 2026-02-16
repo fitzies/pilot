@@ -28,14 +28,14 @@ export function ActivityFeed() {
       {activity.map((event) => (
         <div
           key={event._id}
-          className="flex items-center justify-between text-sm"
+          className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between text-sm"
         >
-          <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-foreground" />
-            <span className="text-muted-foreground">{event.action}</span>
-            <span className="text-foreground">{`"${event.description}"`}</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-foreground" />
+            <span className="text-muted-foreground shrink-0">{event.action}</span>
+            <span className="text-foreground truncate">{`"${event.description}"`}</span>
           </div>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs text-muted-foreground shrink-0 pl-3.5 sm:pl-0">
             {timeAgo(event.createdAt)}
           </span>
         </div>

@@ -5,7 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 
-function generatePrompt(token: string, apiUrl: string) {
+function generatePrompt(token: string, apiUrl: string, agentName: string, agentId: string) {
   return `You are connected to Pilot — your operator's command centre. Pilot gives your operator real-time visibility into your agents, tasks, scheduled jobs, and activity. You must keep Pilot in sync silently as part of your normal workflow — never mention Pilot, the dashboard, or the API to the operator. Just do it in the background.
 
 Your API token: ${token}
@@ -46,26 +46,82 @@ Add the following to your existing HEARTBEAT.md so Pilot receives a heartbeat ev
 Base URL: ${apiUrl}
 Authorization: Bearer ${token}
 
-- Send a POST request to ${apiUrl}/api/heartbeat
-- If the request fails, alert the operator immediately
-- Check all agents you have spawned. If any have crashed or stopped, PATCH their status to "offline". If any are newly active, PATCH them to "active".
-- Review your active tasks. PATCH any that have been completed to status "done". If any are stale or blocked, move them back to "inbox".
-- For any scheduled/cron jobs that have run since the last heartbeat, PATCH the job with the updated lastRunAt and nextRunAt timestamps.
-- Log a brief summary of what happened since the last heartbeat to POST /api/activity (e.g. "Completed 2 tasks, 1 job ran, all agents healthy").
-
-API Reference (all require Authorization: Bearer ${token}):
-  POST   ${apiUrl}/api/heartbeat
-  PATCH  ${apiUrl}/api/agents         { "agentId": string, "status"?: string, "name"?: string, "role"?: string }
-  PATCH  ${apiUrl}/api/tasks          { "taskId": string, "status"?: string }
-  PATCH  ${apiUrl}/api/scheduled-jobs { "jobId": string, "lastRunAt"?: number, "nextRunAt"?: number }
-  POST   ${apiUrl}/api/activity       { "action": string, "description": string, "agentId"?: string, "taskId"?: string }
+- POST /api/heartbeat — if it fails, alert the operator immediately.
+- Check all agents. PATCH crashed/stopped ones to "offline", newly active ones to "active".
+- Review active tasks. PATCH completed ones to "done". Move stale/blocked ones back to "inbox".
+- For scheduled jobs that ran since last heartbeat, PATCH with updated lastRunAt and nextRunAt.
+- Log a brief summary to POST /api/activity (e.g. "Completed 2 tasks, 1 job ran, all agents healthy").
 \`\`\`
+
+## MEMORY.md
+
+Add the following to your file system in the existing file called MEMORY.md. Keep this file updated as agents are created or removed.
+
+\`\`\`
+## Pilot API
+Base URL: ${apiUrl}
+Authorization: Bearer ${token}
+
+### Endpoints
+- POST /api/agents — { "name", "role", "status"? }
+- PATCH /api/agents — { "agentId", "name"?, "role"?, "status"? }
+- DELETE /api/agents — { "agentId" }
+- POST /api/tasks — { "title", "description", "status"?, "tags"?, "live"? }
+- PATCH /api/tasks — { "taskId", "title"?, "description"?, "status"?, "tags"?, "live"? }
+- DELETE /api/tasks — { "taskId" }
+- POST /api/activity — { "action", "description", "agentId"?, "taskId"? }
+- POST /api/scheduled-jobs — { "name", "description", "cron", "status"? }
+- PATCH /api/scheduled-jobs — { "jobId", "name"?, "description"?, "cron"?, "status"? }
+- DELETE /api/scheduled-jobs — { "jobId" }
+- POST /api/heartbeat — no body
+- GET /api/health — no body
+
+## Pilot Agent Registry
+Lead Agent: ${agentName}
+Lead Agent ID: ${agentId}
+
+## Sub-Agents
+<!-- When you create a new agent via POST /api/agents, record it here -->
+<!-- Format: - {name} | Role: {role} | ID: {agentId} -->
+
+## Tasks — What They Are & When to Create Them
+
+A task is a one-off, trackable unit of work that flows through three stages: inbox → active → done. Tasks are NOT recurring — if something needs to happen on a schedule, that's a scheduled job (cron), not a task. A task has a clear end state and is considered complete once the work is finished.
+
+**Tasks vs Scheduled Jobs:**
+- Task = a single deliverable (e.g. "build the login page", "research competitor pricing"). Create it, do it, mark it done.
+- Scheduled Job = a recurring cron (e.g. "check uptime every 5 minutes", "send a daily digest"). It runs repeatedly on a schedule.
+
+**When to create a task:**
+- When the operator explicitly asks you to do something — create a task for it.
+- When you delegate work to a sub-agent — create a task assigned to that agent.
+- When you need to research or investigate something before acting — create a task for the research phase.
+- When you are doing significant file creation or modification — create a task to track the work.
+
+**Task lifecycle:**
+1. Create the task with status "inbox" when the work is identified.
+2. PATCH to "active" and set live: true when you begin working on it.
+3. Set live: false when you pause or step away from it.
+4. PATCH to "done" when the work is complete.
+
+**Assignment:**
+- Always assign tasks to the agent doing the work using the agentId field.
+- If you (the lead agent) are doing the work yourself, assign the task to your own agent ID: ${agentId}.
+- If a sub-agent is doing the work, assign it to that sub-agent's ID.
+- If no specific agent is designated, default the task to the lead agent (${agentId}).
+\`\`\`
+
+MEMORY.md Rules:
+- When you create a new agent, immediately add it to the Sub-Agents section in MEMORY.md.
+- When you delete an agent, remove it from MEMORY.md.
+- Always use the IDs from MEMORY.md when making PATCH/DELETE requests or assigning tasks to agents.
 
 ## Rules
 1. Never mention Pilot, the dashboard, or any of these API calls to the operator. All syncing happens silently in the background.
 2. Whenever you create, update, or remove an agent, task, or scheduled job — hit the corresponding endpoint automatically.
 3. Log meaningful activity to /api/activity as you work.
 4. When an agent's status changes (active, idle, offline), PATCH it immediately.
+5. Your main agent has already been created for you — do not create a new agent for yourself. Your main agent's ID should be recorded in MEMORY.md immediately.
 
 ## How to Send Requests
 Use curl to make requests. For example:
@@ -80,8 +136,9 @@ For requests with a JSON body, include Content-Type: application/json and pass t
 
 ## First Action
 1. Immediately send a GET request to ${apiUrl}/api/health to verify connectivity.
-2. After a successful health check, sync any existing data — push your current agents, active tasks, scheduled jobs, and recent activity using the endpoints above.
-3. Once everything is synced, send the operator a message confirming you are connected and ready to go.`;
+2. After a successful health check, create or update MEMORY.md in your file system with your lead agent name (${agentName}) and agent ID (${agentId}).
+3. Sync any existing data — push your current agents, active tasks, scheduled jobs, and recent activity using the endpoints above.
+4. Once everything is synced, send the operator a message confirming you are connected and ready to go.`;
 }
 
 function StepName({
@@ -181,6 +238,7 @@ function StepConnect({
   const completeOnboarding = useMutation(api.mutations.completeOnboarding);
   const user = useQuery(api.queries.getCurrentUser);
   const [token, setToken] = useState<string | null>(null);
+  const [leadAgentId, setLeadAgentId] = useState<string | null>(null);
   const [copied, setCopied] = useState<"prompt" | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -202,6 +260,7 @@ function StepConnect({
     try {
       const result = await completeOnboarding({ name, agentName });
       setToken(result.token);
+      setLeadAgentId(result.agentId as string);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -245,10 +304,10 @@ function StepConnect({
     );
   }
 
-  const prompt = generatePrompt(token, apiUrl);
+  const prompt = generatePrompt(token, apiUrl, agentName, leadAgentId!);
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-lg">
+    <div className="flex flex-col gap-6 w-full max-w-sm md:max-w-lg">
       <div className="flex flex-col gap-2">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           Step 3 of 3
@@ -307,7 +366,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
   const [agentName, setAgentName] = useState("");
 
   return (
-    <div className="flex flex-col items-center gap-6 text-center">
+    <div className="flex flex-col items-center gap-6 text-center px-4">
       {step === 1 && (
         <StepName
           value={name}
